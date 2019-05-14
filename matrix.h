@@ -1,3 +1,7 @@
+// @File   : matrix.h
+// @Author : Singyuan Yeh (yeh76385@gmail.com)
+// @Date   : 2019 / 5 / 14
+
 #ifndef __MATRIX_H__
 #define __MATRIX_H__
 
