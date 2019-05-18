@@ -296,7 +296,7 @@ void update( double *x, double U[][5], double U_ref[][5] ){
 
 //    estimate time-step from the CFL condition
       double dt = ComputeTimestep( U );
-      printf( "t = %13.7e --> %13.7e, dt = %13.7e,  ", t, t+dt, dt );
+      printf( "t = %13.7e --> %13.7e, dt = %13.7e \n ", t, t+dt, dt );
 
 //    data reconstruction
       double L[N][5];
@@ -348,7 +348,8 @@ int main(){
    double U_ref[N][5];
    double d[N_In];    
    double d_ref[N_In];
-   double err = 0;   
+   double err = 0;
+   char buff[100];
    for (int j = 0; j < N_In; j++){ 
       x[j] = (j+0.5)*dx;              // cell-centered coordinates
       ref_func( x[j], U[j+nghost] );
@@ -356,10 +357,14 @@ int main(){
       d[j] = U[j+nghost][0];
       d_ref[j] = U_ref[j+nghost][0];   
    }
+   
+// plot
    vector<double> xx(begin(x), end(x));
    vector<double> dd(begin(d), end(d));
    vector<double> dd_ref(begin(d_ref), end(d_ref));  
-
+   snprintf(buff, sizeof(buff), "t = %6.3f, error = %10.3e" , t, err);
+   string s = buff;  
+    
    plt::figure_size(1200, 780);
    plt::xlim( 0.0, L );
    plt::ylim( d0 -1.5*d_amp, d0 +1.5*d_amp );
@@ -367,28 +372,42 @@ int main(){
    plt::ylabel("Density");    
    plt::Plot numerical("numerical", xx, dd, "r-");
    plt::Plot reference("reference", xx, dd_ref, "b--");
-   plt::title("Simulate acoustic wave with the MUSCL-Hancock scheme");
+   plt::title(s);
    plt::legend();
-   plt::pause(0.005);
-
+   plt::pause(0.005); 
+          
    while(t < end_time){
-      update( x, U, U_ref); 
-      err = 0;
-      for (int j = 0; j < N_In; j++ ){
-         d[j] = U[j+nghost][0];
-         d_ref[j] = U_ref[j+nghost][0];
-         err = err + abs( d_ref[j] - d[j])/N_In;
+      if(plt::fignum_exists(1)){
+//       update density
+         update( x, U, U_ref); 
+         err = 0;
+         for (int j = 0; j < N_In; j++ ){
+            d[j] = U[j+nghost][0];
+            d_ref[j] = U_ref[j+nghost][0];
+            err = err + abs( d_ref[j] - d[j])/N_In;
+         }
+
+         dd.clear();
+         dd_ref.clear();
+         dd.assign(begin(d), end(d));
+         dd_ref.assign(begin(d_ref), end(d_ref)); 
+      
+//       update figure
+         snprintf(buff, sizeof(buff), "t = %6.3f, error = %10.3e" , t, err);
+         string s = buff;   
+         plt::title(s); 
+         numerical.update(xx, dd);
+         reference.update(xx, dd_ref);
+         plt::pause(0.005);
       }
-      printf("err = %10.3e  \n", err); 
-      dd.clear();
-      dd_ref.clear();
-      dd.assign(begin(d), end(d));
-      dd_ref.assign(begin(d_ref), end(d_ref)); 
-           
-      numerical.update(xx, dd);
-      reference.update(xx, dd_ref);
-      plt::pause(0.005);
+      else{
+         break;
+      }
    }
+   if(plt::fignum_exists(1)){
+      plt::show();
+   }
+
 
    return 0;
 }
