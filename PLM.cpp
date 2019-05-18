@@ -365,13 +365,12 @@ int main(){
    plt::ylim( d0 -1.5*d_amp, d0 +1.5*d_amp );
    plt::xlabel("x");
    plt::ylabel("Density");    
-   plt::Plot numerical("numerical", "r-");
-   plt::Plot reference("reference", "b--");
+   plt::Plot numerical("numerical", xx, dd, "r-");
+   plt::Plot reference("reference", xx, dd_ref, "b--");
    plt::title("Simulate acoustic wave with the MUSCL-Hancock scheme");
    plt::legend();
-   
-   numerical.update(xx, dd);
-   reference.update(xx, dd_ref);
+   plt::show(false);
+
    while(t < end_time){
       update( x, U, U_ref); 
       err = 0;
@@ -388,7 +387,7 @@ int main(){
            
       numerical.update(xx, dd);
       reference.update(xx, dd_ref);
-      plt::pause(0.015);
+      plt::pause(0.0005);
    }
 
    return 0;
