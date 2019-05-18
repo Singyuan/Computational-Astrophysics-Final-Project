@@ -296,7 +296,7 @@ void update( double *x, double U[][5], double U_ref[][5] ){
 
 //    estimate time-step from the CFL condition
       double dt = ComputeTimestep( U );
-      printf( "t = %13.7e --> %13.7e, dt = %13.7e  \n", t, t+dt, dt );
+      printf( "t = %13.7e --> %13.7e, dt = %13.7e  ", t, t+dt, dt );
 
 //    data reconstruction
       double L[N][5];
@@ -332,7 +332,7 @@ void update( double *x, double U[][5], double U_ref[][5] ){
       t = t + dt;  
    }
    
-// calculate the reference analytical solution and estimate errors
+// calculate the reference analytical solution
    for (int j = 0; j < N_In; j++ ){
       ref_func( x[j], U_ref[j+nghost] );
    }
@@ -349,7 +349,6 @@ int main(){
    double d[N_In];    
    double d_ref[N_In];
    double err = 0;   
- 
    for (int j = 0; j < N_In; j++){ 
       x[j] = (j+0.5)*dx;              // cell-centered coordinates
       ref_func( x[j], U[j+nghost] );
@@ -359,49 +358,37 @@ int main(){
    }
    vector<double> xx(begin(x), end(x));
    vector<double> dd(begin(d), end(d));
-   vector<double> dd_ref(begin(d_ref), end(d_ref)); 
-   
+   vector<double> dd_ref(begin(d_ref), end(d_ref));  
 
-//   string s = "t = "  t  " err = "  err;
-//   plt::title(s);
-
+   plt::figure_size(1200, 780);
    plt::xlim( 0.0, L );
    plt::ylim( d0 -1.5*d_amp, d0 +1.5*d_amp );
-       
+   plt::xlabel("x");
+   plt::ylabel("Density");    
    plt::Plot numerical("numerical", "r-");
    plt::Plot reference("reference", "b--");
+   plt::title("Simulate acoustic wave with the MUSCL-Hancock scheme");
    plt::legend();
+   
    numerical.update(xx, dd);
    reference.update(xx, dd_ref);
-      
    while(t < end_time){
       update( x, U, U_ref); 
+      err = 0;
       for (int j = 0; j < N_In; j++ ){
          d[j] = U[j+nghost][0];
          d_ref[j] = U_ref[j+nghost][0];
+         err = err + abs( d_ref[j] - d[j])/N_In;
       }
+      printf("err = %10.3e  \n", err); 
       dd.clear();
       dd_ref.clear();
       dd.assign(begin(d), end(d));
       dd_ref.assign(begin(d_ref), end(d_ref)); 
-//create figure
-   
-//      plt::plot(x, d, "r--");
-//      plt::plot(x, d_ref, "b-");
-//      plt::named_plot("numerical", x, d);
-//      plt::named_plot("reference", x, d_ref);
-
-
-//      plt::xlim( 0.0, L );
-//      plt::ylim( -1.5*d_amp, +1.5*d_amp );
-//      plt::show();
-
-//    plt::title("t = %13.7e err =  %13.7e", t, err);
-//      plt::legend();
-
+           
       numerical.update(xx, dd);
       reference.update(xx, dd_ref);
-      plt::pause(0.1);
+      plt::pause(0.015);
    }
 
    return 0;
