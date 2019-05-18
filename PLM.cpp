@@ -296,7 +296,7 @@ void update( double *x, double U[][5], double U_ref[][5] ){
 
 //    estimate time-step from the CFL condition
       double dt = ComputeTimestep( U );
-      printf( "t = %13.7e --> %13.7e, dt = %13.7e  ", t, t+dt, dt );
+      printf( "t = %13.7e --> %13.7e, dt = %13.7e,  ", t, t+dt, dt );
 
 //    data reconstruction
       double L[N][5];
