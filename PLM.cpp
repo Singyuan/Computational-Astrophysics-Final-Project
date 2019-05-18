@@ -369,7 +369,7 @@ int main(){
    plt::Plot reference("reference", xx, dd_ref, "b--");
    plt::title("Simulate acoustic wave with the MUSCL-Hancock scheme");
    plt::legend();
-   plt::show(false);
+   plt::pause(0.005);
 
    while(t < end_time){
       update( x, U, U_ref); 
@@ -387,7 +387,7 @@ int main(){
            
       numerical.update(xx, dd);
       reference.update(xx, dd_ref);
-      plt::pause(0.0005);
+      plt::pause(0.005);
    }
 
    return 0;
