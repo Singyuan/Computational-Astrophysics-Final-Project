@@ -10,7 +10,7 @@ const double cfl = 0.8;         //Courant factor
 const int nghost = 2;           //number of ghost zones
 const double mygamma = 5.0 / 3.0; //ratio of specific heats
 const double end_time = 0.1;    //simulation time
-const int largenumber = 50;      //stop the loop
+const int largenumber = 35;      //stop the loop
 
 // derived constants
 int N = N_In + 2 * nghost; //total number of cells including ghost zones
