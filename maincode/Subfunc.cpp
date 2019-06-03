@@ -170,6 +170,46 @@ void DataReconstruction_PLM(matrix &U, matrix &L, matrix &R)
 }
 
 // ##########################
+// Piecewise-parabolic data reconstruction (PPM)
+// ##########################
+void DataReconstruction_PPM(matrix &U, matrix &L, matrix &R)
+{
+    // allocate memory
+    matrix W(N, 3);
+    matrix slope(N, 3);
+    matrix acc(N, 3);
+
+    // conserved variables-- > primitive variables
+    for (int j = 1; j <= N; j++)
+        W.SetRow(j, Conserved2Primitive(U.GetRow(j)));
+
+    // compute the left and right states of each cell
+    for (int j = 2; j <= N - 1; j++)
+        slope.SetRow(j, ComputeLimitedSlope(W.GetRow(j - 1), W.GetRow(j), W.GetRow(j + 1)));
+
+    // compute the left and right states of each cell
+    for (int j = 3; j <= N - 2; j++)
+        acc.SetRow(j, ComputeLimitedSlope(slope.GetRow(j - 1), slope.GetRow(j), slope.GetRow(j + 1)));
+
+    matrix slope_limited(1, 3);
+    matrix acc_limited(1, 3);
+    for (int j = 2; j <= N - 1; j++)
+    {
+        //  get the face-centered variables
+        slope_limited = slope.GetRow(j);
+        acc_limited = acc.GetRow(j);
+        L.SetRow(j, W.GetRow(j) - 0.5 * slope_limited + 0.125 * acc_limited);
+        R.SetRow(j, W.GetRow(j) + 0.5 * slope_limited + 0.125 * acc_limited);
+
+        // ensure face-centered variables lie between nearby volume-averaged (~cell-centered) values
+
+        // primitive variables --> conserved variables
+        L.SetRow(j, Primitive2Conserved(L.GetRow(j)));
+        R.SetRow(j, Primitive2Conserved(R.GetRow(j)));
+    }
+}
+
+// ##########################
 // Convert conserved variables to fluxes
 // ##########################
 matrix Conserved2Flux(matrix U)

@@ -59,7 +59,7 @@ main(int argc, char *argv[])
         printf("t = %3.4f --> %3.4f\n", t, t + dt);
 
         // data reconstruction
-        DataReconstruction_PLM(U, L, R);
+        DataReconstruction_PPM(U, L, R);
 
         // update the face-centered variables by 0.5*dt
         for (int j = 2; j <= N - 1; j++)
