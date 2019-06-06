@@ -111,6 +111,7 @@ void matrix::display(void)
 matrix matrix::GetRow(int R)
 {
     matrix temp(1, Col);
+#pragma omp parallel for
     for (int j = 0; j < Col; j++)
     {
         temp.Elem[j] = Elem[(R - 1) * Col + j];
@@ -121,6 +122,7 @@ matrix matrix::GetRow(int R)
 // set the value of R row
 void matrix::SetRow(int R, const matrix &M)
 {
+#pragma omp parallel for
     for (int j = 0; j < Col; j++)
     {
         Elem[(R - 1) * Col + j] = M.Elem[j];
@@ -162,6 +164,8 @@ const matrix &matrix::operator=(const matrix &M)
     Row = M.Row;
     Numel = M.Numel;
     Elem = new double[Numel];
+
+#pragma omp parallel for
     for (int i = 0; i < Numel; i++)
         Elem[i] = M.Elem[i];
     return *this;
@@ -184,6 +188,7 @@ matrix dotprod(const matrix &matrix1, const matrix &matrix2)
     temp = matrix1;
     if (matrix1.Col == matrix2.Col && matrix1.Row == matrix2.Row)
     {
+#pragma omp parallel for
         for (int i = 0; i < matrix1.Numel; i++)
             temp.Elem[i] *= matrix2.Elem[i];
         return temp;
@@ -214,6 +219,7 @@ matrix operator+(const matrix &matrix1, const matrix &matrix2)
     temp = matrix1;
     if (matrix1.Col == matrix2.Col && matrix1.Row == matrix2.Row)
     {
+#pragma omp parallel for
         for (int i = 0; i < matrix1.Numel; i++)
             temp.Elem[i] += matrix2.Elem[i];
         return temp;
@@ -230,6 +236,7 @@ matrix operator+(const matrix &matrix1, const double val)
 {
     matrix Temp(matrix1.Row, matrix1.Col);
     Temp = matrix1;
+#pragma omp parallel for
     for (int i = 0; i < matrix1.Numel; i++)
         Temp.Elem[i] += val;
     return Temp;
@@ -248,6 +255,7 @@ matrix operator-(const matrix &matrix1, const matrix &matrix2)
     temp = matrix1;
     if (matrix1.Col == matrix2.Col && matrix1.Row == matrix2.Row)
     {
+#pragma omp parallel for
         for (int i = 0; i < matrix1.Numel; i++)
             temp.Elem[i] -= matrix2.Elem[i];
         return temp;
@@ -264,6 +272,7 @@ matrix operator-(const matrix &matrix1, const double val)
 {
     matrix Temp(matrix1.Row, matrix1.Col);
     Temp = matrix1;
+#pragma omp parallel for
     for (int i = 0; i < matrix1.Numel; i++)
         Temp.Elem[i] -= val;
     return Temp;
@@ -283,6 +292,7 @@ matrix operator*(const matrix &matrix1, const matrix &matrix2)
     int j, k;
     if (matrix1.Col == matrix2.Row)
     {
+#pragma omp parallel for private(temp, j, k)
         for (int i = 0; i < Temp.Row; i++)
         {
             for (j = 0; j < Temp.Col; j++)
@@ -311,6 +321,7 @@ matrix operator*(const matrix &matrix1, const double val)
 {
     matrix Temp(matrix1.Row, matrix1.Col);
     Temp = matrix1;
+#pragma omp parallel for
     for (int i = 0; i < matrix1.Numel; i++)
         Temp.Elem[i] = Temp.Elem[i] * val;
     return Temp;
