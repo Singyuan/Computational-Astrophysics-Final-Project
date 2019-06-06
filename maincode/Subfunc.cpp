@@ -32,7 +32,7 @@ matrix InitialCondition(double x)
 // ##########################
 // Define boundary condition by setting ghost zones
 // ##########################
-BoundaryCondition(matrix &U)
+void BoundaryCondition(matrix &U)
 { // outflow
     for (int i = 1; i <= nghost; i++)
     {
@@ -86,7 +86,7 @@ double ComputeTimestep(matrix &U)
 // ##########################
 // Compute limited slope
 // ##########################
-matrix ComputeLimitedSlope(matrix L, matrix C, matrix R)
+matrix ComputeLimitedSlope(const matrix &L, const matrix &C, const matrix &R)
 {
     // compute the left and right slopes
     matrix slope_L(1, 3);
@@ -115,7 +115,7 @@ matrix ComputeLimitedSlope(matrix L, matrix C, matrix R)
 // ##########################
 // Convert conserved variables to primitive variables
 // ##########################
-matrix Conserved2Primitive(matrix U)
+matrix Conserved2Primitive(const matrix &U)
 {
     matrix W(1, 3);
     W(1, 1) = U(1, 1);
@@ -127,7 +127,7 @@ matrix Conserved2Primitive(matrix U)
 // ##########################
 // Convert primitive variables to conserved variables
 // ##########################
-matrix Primitive2Conserved(matrix W)
+matrix Primitive2Conserved(const matrix &W)
 {
     matrix U(1, 3);
     U(1, 1) = W(1, 1);
@@ -212,7 +212,7 @@ void DataReconstruction_PPM(matrix &U, matrix &L, matrix &R)
 // ##########################
 // Convert conserved variables to fluxes
 // ##########################
-matrix Conserved2Flux(matrix U)
+matrix Conserved2Flux(const matrix &U)
 {
     matrix flux(1, 3);
     double P = ComputePressure(U(1, 1), U(1, 2), U(1, 3));
@@ -227,7 +227,7 @@ matrix Conserved2Flux(matrix U)
 // ##########################
 // Roe's Riemann solver
 // ##########################
-matrix Roe(matrix L, matrix R)
+matrix Roe(const matrix &L, const matrix &R)
 {
     // compute the enthalpy of the left and right states: H = (E+P)/rho
     matrix flux(1, 3);

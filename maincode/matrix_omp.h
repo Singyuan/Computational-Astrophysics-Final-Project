@@ -26,7 +26,7 @@ public:
     void SetCol(int C, const matrix &M); // set the value of C col
     matrix T();                          // transpose
 
-    double &operator()(int R, int C);
+    double &operator()(int R, int C) const;
     const matrix &operator=(const matrix &M); // given
 
 public:
@@ -172,7 +172,7 @@ const matrix &matrix::operator=(const matrix &M)
 }
 
 // matrix component define ()
-double &matrix::operator()(int R, int C)
+double &matrix::operator()(int R, int C) const
 {
     return Elem[(R - 1) * Col + (C - 1)];
 }
