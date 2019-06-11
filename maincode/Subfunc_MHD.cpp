@@ -315,10 +315,10 @@ matrix Conserved2FluxZ(const matrix &U)
 // ##########################
 // Roe's Riemann solver for MHD
 // ##########################
-matrix RoeX(const matrix &L, const matrix &R, double Bx)
+matrix Roe(const matrix &L, const matrix &R, double Bx)
 {
     // compute the enthalpy of the left and right states: H = (E+P*)/rho
-    matrix fluxX(1, 8);
+    matrix flux(1, 8);
     double P_L = ComputePressure(L);
     double P_R = ComputePressure(R);
     double PStar_L = ComputePressureStar(L);
@@ -374,11 +374,16 @@ matrix RoeX(const matrix &L, const matrix &R, double Bx)
     }
 
     // compute the amplitudes of different characteristic waves
+    matrix dU(1, 8);
     matrix dW(1, 8);
     matrix amp(1, 7);
-
+    dU = L - R;
     dW = Conserved2Primitive(L) - Conserved2Primitive(R);
-     
+    dW(1, 2) = (dU(1, 2) - u*dU(1, 1))/rho;
+    dW(1, 3) = (dU(1, 3) - v*dU(1, 1))/rho;
+    dW(1, 4) = (dU(1, 4) - w*dU(1, 1))/rho;
+    dW(1, 5) = (mygamma-1.0)*((0.5*V2-X)*dW(1, 1) - (u*dU(1, 2) + v*dU(1, 3) + w*dU(1, 4)) + dU(1, 5) - (Bx*dU(1, 6) + By*dU(1, 7) + Bz*dU(1, 8))); 
+ 
     amp(1, 1) = 0.5*(alphaf*(X*dW(1, 1) + dW(1, 5)) + rho*alphas*cs*S*(betay*dW(1, 3) + betaz*dW(1, 4)) - rho*alphaf*cf*dW(1, 2) + rho_sqrt*alphas*a*(betay*dW(1, 7) + betaz*dW(1,8))); 
     amp(1, 2) = 0.5*(betay*dW(1, 4) - betaz*dW(1 ,3) + S*(betay*dW(1, 8)- betaz*dW(1, 7))/rho_sqrt); 
     amp(1, 3) = 0.5*(alphas*(X*dW(1, 1) + dW(1, 5)) - rho*alphaf*cf*S*(betay*dW(1, 3) + betaz*dW(1, 4)) - rho*alphas*cs*dW(1, 2) + rho_sqrt*alphaf*a*(betay*dW(1, 7) + betaz*dW(1,8)));
@@ -471,326 +476,170 @@ matrix RoeX(const matrix &L, const matrix &R, double Bx)
 
     // compute the Roe flux    
     amp = dotprod(amp, EigVal);
-    fluxX = 0.5 * (flux_L + flux_R) - 0.5 * amp * EigVec;
-    return fluxX;
+    flux = 0.5 * (flux_L + flux_R) - 0.5 * amp * EigVec;
+    return flux;
 }
 
-matrix RoeY(const matrix &L, const matrix &R, double By)
+matrix HLLD(const matrix &L, const matrix &R, double Bx)
 {
-    // compute the enthalpy of the left and right states: H = (E+P*)/rho
-    matrix fluxY(1, 8);
-    double P_L = ComputePressure(L);
-    double P_R = ComputePressure(R);
-    double PStar_L = ComputePressureStar(L);
-    double PStar_R = ComputePressureStar(R);
-    double H_L = (L(1, 5) + PStar_L) / L(1, 1);
-    double H_R = (R(1, 5) + PStar_R) / R(1, 1);
-    
-    // compute Roe average values
-    double rhoL_sqrt = pow(L(1, 1), 0.5);
-    double rhoR_sqrt = pow(R(1, 1), 0.5);
-    double rho = rhoL_sqrt*rhoR_sqrt;
-    double u  = (L(1, 2) / rhoL_sqrt + R(1, 2) / rhoR_sqrt) / (rhoL_sqrt + rhoR_sqrt);
-    double v  = (L(1, 3) / rhoL_sqrt + R(1, 3) / rhoR_sqrt) / (rhoL_sqrt + rhoR_sqrt);
-    double w  = (L(1, 4) / rhoL_sqrt + R(1, 4) / rhoR_sqrt) / (rhoL_sqrt + rhoR_sqrt);    
-    double Bx = (L(1, 6) * rhoR_sqrt + R(1, 6) * rhoL_sqrt) / (rhoL_sqrt + rhoR_sqrt);
-    double Bz = (L(1, 8) * rhoR_sqrt + R(1, 8) * rhoL_sqrt) / (rhoL_sqrt + rhoR_sqrt);
-    double H  = (rhoL_sqrt * H_L + rhoR_sqrt * H_R) / (rhoL_sqrt + rhoR_sqrt);
-    double V2 = u*u + v*v + w*w;
-    double B2 = Bx*Bx + By*By + Bz*Bz;
-    double X  = 0.5*(pow(R(1, 6) - L(1, 6), 2.0) + pow(R(1, 8) - L(1, 8), 2.0))/pow(rhoL_sqrt + rhoR_sqrt, 2.0); 
-    double P  = (rho/mygamma)*((mygamma-1.0)*(H - 0.5*V2 - B2/rho ) - (mygamma-2.0)*X);
+    double rhoL = L(1, 1);
+    double rhoR = R(1, 1);
+    double uL  = L(1, 2)/L(1, 1);
+    double uR  = R(1, 2)/R(1, 1);
+    double vL  = L(1, 3)/L(1, 1);
+    double vR  = R(1, 3)/R(1, 1);
+    double wL  = L(1, 4)/L(1, 1);
+    double wR  = R(1, 4)/R(1, 1);
+    double pL  = ComputePressure(L);
+    double pR  = ComputePressure(R);
+    double pTL = ComputePressureStar(L);
+    double pTR = ComputePressureStar(R);
+    double EL  = L(1, 5);
+    double ER  = R(1, 5);
+    double ByL = L(1, 7);
+    double ByR = R(1, 7);
+    double BzL = L(1, 8);
+    double BzR = R(1, 8);
+     
+    double cfL = sqrt((mygamma*pL + (Bx*Bx + ByL*ByL + BzL*BzL) + sqrt(pow((mygamma*pL + (Bx*Bx + ByL*ByL + BzL*BzL)), 2) - 4*mygamma*pL*Bx*Bx))/(2*rhoL));
+    double cfR = sqrt((mygamma*pR + (Bx*Bx + ByR*ByR + BzR*BzR) + sqrt(pow((mygamma*pR + (Bx*Bx + ByR*ByR + BzR*BzR)), 2) - 4*mygamma*pR*Bx*Bx))/(2*rhoR));
+    double SL = min(uL, uR) - max(cfL, cfR);
+    double SR = max(uL, uR) + max(cfL, cfR);
 
-    // check negative pressure
-    if ( P < 0.0 )
+    // compute HLL parameters
+    double pTstar = ((SR - uR)*rhoR*pTL - (SL - uL)*rhoL*pTR + rhoL*rhoR*(SR - uR)*(SL - uL)*(uR - uL))/((SR - uR)*rhoR - (SL - uL)*rhoL);
+    double SM = (pTR - pTL + rhoL*uL*(SL - uL) - rhoR*uR*(SR - uR))/(rhoL*(SL - uL)-rhoR*(SR - uR));
+    double rhostarL = rhoL*(SL - uL)/(SL - SM);
+    double rhostarR = rhoR*(SR - uR)/(SR - SM);
+    double SstarL = SM - abs(Bx)/sqrt(rhostarL);
+    double SstarR = SM + abs(Bx)/sqrt(rhostarR);
+    double vstarL = vL - Bx*ByL*(SM - uL)/(rhoL*(SL - uL)*(SL - SM) - Bx*Bx);
+    double vstarR = vR - Bx*ByR*(SM - uR)/(rhoR*(SR - uR)*(SR - SM) - Bx*Bx);
+    double BystarL = ByL*(rhoL*pow((SL - uL), 2.0) - Bx*Bx)/(rhoL*(SL - uL)*(SL - SM) - Bx*Bx);
+    double BystarR = ByR*(rhoR*pow((SR - uR), 2.0) - Bx*Bx)/(rhoR*(SR - uR)*(SR - SM) - Bx*Bx);
+    double wstarL = wL - Bx*BzL*(SM - uL)/(rhoL*(SL - uL)*(SL - SM) - Bx*Bx);
+    double wstarR = wR - Bx*BzR*(SM - uR)/(rhoR*(SR - uR)*(SR - SM) - Bx*Bx);
+    double BzstarL = BzL*(rhoL*pow((SL - uL), 2.0) - Bx*Bx)/(rhoL*(SL - uL)*(SL - SM) - Bx*Bx);
+    double BzstarR = BzR*(rhoR*pow((SR - uR), 2.0) - Bx*Bx)/(rhoR*(SR - uR)*(SR - SM) - Bx*Bx);
+    double EstarL = ((SL - uL)*EL - pTL*uL + pTstar*SM + Bx*(uL*Bx + vL*ByL + wL*BzL - SM*Bx - vstarL*BystarL - wstarL*BzstarL))/(SL - SM);
+    double EstarR = ((SR - uR)*ER - pTR*uR + pTstar*SM + Bx*(uR*Bx + vR*ByR + wR*BzR - SM*Bx - vstarR*BystarR - wstarR*BzstarR))/(SR - SM);
+    double rhostar2L = rhostarL;
+    double rhostar2R = rhostarR;
+    double vstar2 = (sqrt(rhostarL)*vstarL + sqrt(rhostarR)*vstarR + (BystarR - BystarL)*copysign(1.0, Bx))/(sqrt(rhostarL) + sqrt(rhostarR));
+    double wstar2 = (sqrt(rhostarL)*wstarL + sqrt(rhostarR)*wstarR + (BzstarR - BzstarL)*copysign(1.0, Bx))/(sqrt(rhostarL) + sqrt(rhostarR));
+    double Bystar2 = (sqrt(rhostarL)*BystarR + sqrt(rhostarR)*BystarL + sqrt(rhostarL)*sqrt(rhostarR)*(vstarR-vstarL)*copysign(1.0, Bx))/(sqrt(rhostarL) + sqrt(rhostarR));
+    double Bzstar2 = (sqrt(rhostarL)*BzstarR + sqrt(rhostarR)*BzstarL + sqrt(rhostarL)*sqrt(rhostarR)*(wstarR-wstarL)*copysign(1.0, Bx))/(sqrt(rhostarL) + sqrt(rhostarR));
+    double Estar2L = EstarL - sqrt(rhostarL)*(SM*Bx + vstarL*BystarL + wstarL*BzstarL - SM*Bx - vstar2*Bystar2 - wstar2*Bzstar2)*copysign(1.0, Bx);
+    double Estar2R = EstarR + sqrt(rhostarR)*(SM*Bx + vstarR*BystarR + wstarR*BzstarR - SM*Bx - vstar2*Bystar2 - wstar2*Bzstar2)*copysign(1.0, Bx);
+    // compute F
+    matrix FL(1, 8);
+    matrix FR(1, 8);
+    FL = Conserved2FluxX(L);
+    FR = Conserved2FluxX(R);
+    // compute U*
+    matrix UstarL(1, 8);
+    matrix UstarR(1, 8);
+
+    UstarL(1, 1) = rhostarL;
+    UstarL(1, 2) = rhostarL*SM;
+    UstarL(1, 3) = rhostarL*vstarL;
+    UstarL(1, 4) = rhostarL*wstarL;
+    UstarL(1, 5) = EstarL;
+    UstarL(1, 6) = Bx;
+    UstarL(1, 7) = BystarL;
+    UstarL(1, 8) = BzstarL;
+
+    UstarR(1, 1) = rhostarR;
+    UstarR(1, 2) = rhostarR*SM;
+    UstarR(1, 3) = rhostarR*vstarR;
+    UstarR(1, 4) = rhostarR*wstarR;
+    UstarR(1, 5) = EstarR;
+    UstarR(1, 6) = Bx;
+    UstarR(1, 7) = BystarR;
+    UstarR(1, 8) = BzstarR;
+    // compute F*
+    matrix FstarL(1, 8);
+    matrix FstarR(1, 8);
+    for(int i = 1; i <= 8; i++)
     {
-        printf("negative pressure!\t%f\n", H - 0.5 * V2);
-        exit(1);
+        FstarL(1, i) = FL(1, i) + SL*(UstarL(1, i) - L(1, i));
+        FstarR(1, i) = FR(1, i) + SR*(UstarR(1, i) - R(1, i));
     }
-    // calculate speed 
-    double a  = pow( mygamma*P/rho ,0.5);  //sound speed
-    double ca = pow( By*By/rho, 0.5);      //Alfven speed
-    double cf = pow(0.5*(a*a + B2/rho) + 0.5*pow( (a*a + B2/rho)*(a*a + B2/rho) - 4.0*a*a*By*By/rho, 0.5) ,0.5); //fast magnetosonic speed
-    double cs = pow(0.5*(a*a + B2/rho) - 0.5*pow( (a*a + B2/rho)*(a*a + B2/rho) - 4.0*a*a*By*By/rho, 0.5) ,0.5); //slow magnetosonic speed
+    // compute U**
+    matrix Ustar2L(1, 8);
+    matrix Ustar2R(1, 8);
+
+    Ustar2L(1, 1) = rhostar2L;
+    Ustar2L(1, 2) = rhostar2L*SM;
+    Ustar2L(1, 3) = rhostar2L*vstar2;
+    Ustar2L(1, 4) = rhostar2L*wstar2;
+    Ustar2L(1, 5) = Estar2L;
+    Ustar2L(1, 6) = Bx;
+    Ustar2L(1, 7) = Bystar2;
+    Ustar2L(1, 8) = Bzstar2;
     
-    // compute some parameters
-    double alphaf = pow((a*a - cs*cs)/(cf*cf - cs*cs), 0.5);
-    double alphas = pow((cf*cf - a*a)/(cf*cf - cs*cs), 0.5); 
-    double betax  = Bx/pow(Bx*Bx + Bz*Bz, 0.5);
-    double betaz  = Bz/pow(Bx*Bx + Bz*Bz, 0.5);
-    double rho_sqrt = pow(rho, 0.5);
-    double S;    //S = sign(By)
-    if(By > 0.0)
+    Ustar2R(1, 1) = rhostar2R;
+    Ustar2R(1, 2) = rhostar2R*SM;
+    Ustar2R(1, 3) = rhostar2R*vstar2;
+    Ustar2R(1, 4) = rhostar2R*wstar2;
+    Ustar2R(1, 5) = Estar2R;
+    Ustar2R(1, 6) = Bx;
+    Ustar2R(1, 7) = Bystar2;
+    Ustar2R(1, 8) = Bzstar2;
+    // compute F**
+    matrix Fstar2L(1, 8);
+    matrix Fstar2R(1, 8);
+    for(int i = 1; i <= 8; i++)
     {
-        S = 1.0;
+        Fstar2L(1, i) = FstarL(1, i) + SstarL*(Ustar2L(1, i) - UstarL(1, i));
+        Fstar2R(1, i) = FstarR(1, i) + SstarR*(Ustar2R(1, i) - UstarR(1, i));
     }
-    else if(By < 0.0)
+
+    // compute flux
+    matrix F(1, 8);
+    if(SL >= 0)
     {
-        S = -1.0;
+        for(int i = 1; i <= 8; i++)
+        {
+            F(1, i) = FL(1, i);
+        }
     }
-    else
+    else if(SL < 0 && SstarL >= 0)
     {
-        S = 0.0;
+        for(int i = 0; i < 8; i++)
+        {
+             F(1, i) = FstarL(1, i);
+        }
     }
-
-    // compute the amplitudes of different characteristic waves
-    matrix dW(1, 8);
-    matrix amp(1,7);
-
-    dW = Conserved2Primitive(L) - Conserved2Primitive(R);
-    
-    amp(1, 1) = 0.5*(alphaf*(X*dW(1, 1) + dW(1, 5)) + rho*alphas*cs*S*(betaz*dW(1, 4) + betax*dW(1, 2)) - rho*alphaf*cf*dW(1, 3) + rho_sqrt*alphas*a*(betaz*dW(1, 8) + betax*dW(1, 6))); 
-    amp(1, 2) = 0.5*(betaz*dW(1, 2) - betax*dW(1 ,4) + S*(betaz*dW(1, 6)- betax*dW(1, 8))/rho_sqrt); 
-    amp(1, 3) = 0.5*(alphas*(X*dW(1, 1) + dW(1, 5)) - rho*alphaf*cf*S*(betaz*dW(1, 4) + betax*dW(1, 2)) - rho*alphas*cs*dW(1, 3) + rho_sqrt*alphaf*a*(betaz*dW(1, 8) + betax*dW(1, 6)));
-    amp(1, 4) = (a*a - X)*dW(1, 1) - (P_L - P_R);
-    amp(1, 5) = 0.5*(alphas*(X*dW(1, 1) + dW(1, 5)) + rho*alphaf*cf*S*(betaz*dW(1, 4) + betax*dW(1, 2)) + rho*alphas*cs*dW(1, 3) + rho_sqrt*alphaf*a*(betaz*dW(1, 8) + betax*dW(1, 6)));
-    amp(1, 6) = 0.5*(betax*dW(1, 4) - betaz*dW(1 ,2) + S*(betaz*dW(1, 6)- betax*dW(1, 8))/rho_sqrt);
-    amp(1, 7) = 0.5*(alphaf*(X*dW(1, 1) + dW(1, 5)) - rho*alphas*cs*S*(betaz*dW(1, 4) + betax*dW(1, 2)) + rho*alphaf*cf*dW(1, 3) + rho_sqrt*alphas*a*(betaz*dW(1, 8) + betax*dW(1, 6)));
-    // compute the eigenvalues and right eigenvector matrix R
-    matrix EigVal(1, 7);
-    matrix EigVec(7, 8);
-
-    EigVal(1, 1) = abs(v - cf);
-    EigVal(1, 2) = abs(v - ca);
-    EigVal(1, 3) = abs(v - cs);
-    EigVal(1, 4) = abs(v);
-    EigVal(1, 5) = abs(v + cs);
-    EigVal(1, 6) = abs(v + ca);
-    EigVal(1, 7) = abs(v + cf);
-    
-    //R_v-cf 
-    EigVec(1, 1) = alphaf/(a*a);
-    EigVec(1, 2) = (alphaf*u + alphas*cs*betax*S)/(a*a);
-    EigVec(1, 3) = alphaf*(v - cf)/(a*a);
-    EigVec(1, 4) = (alphaf*w + alphas*cs*betaz*S)/(a*a);
-    EigVec(1, 5) = ( alphaf*(H - B2/rho - v*cf) + alphas*cs*S*(u*betax + w*betaz) - alphas*a*pow(Bx*Bx + Bz*Bz, 0.5)/rho_sqrt )/(a*a);
-    EigVec(1, 6) = alphas*betax/(rho_sqrt*a);
-    EigVec(1, 7) = 0.0;
-    EigVec(1, 8) = alphas*betaz/(rho_sqrt*a);
-    //R_v-ca
-    EigVec(2, 1) = 0.0;
-    EigVec(2, 2) =  rho*betaz;
-    EigVec(2, 3) = 0.0;
-    EigVec(2, 4) = -rho*betax;
-    EigVec(2, 5) = -rho*(w*betax - u*betaz);
-    EigVec(2, 6) =  S*rho_sqrt*betaz;
-    EigVec(2, 7) = 0.0;
-    EigVec(2, 8) = -S*rho_sqrt*betax;
-    //R_v-cs
-    EigVec(3, 1) = alphas/(a*a);
-    EigVec(3, 2) = (alphas*u - alphaf*cf*betax*S)/(a*a);
-    EigVec(3, 3) = alphas*(v - cs)/(a*a);
-    EigVec(3, 4) = (alphas*w - alphaf*cf*betaz*S)/(a*a);
-    EigVec(3, 5) = ( alphas*(H - B2/rho - v*cs) - alphaf*cf*S*(w*betaz + u*betax) - alphaf*a*pow(Bx*Bx + Bz*Bz, 0.5)/rho_sqrt )/(a*a);
-    EigVec(3, 6) = -alphaf*betax/(rho_sqrt*a);
-    EigVec(3, 7) = 0.0;
-    EigVec(3, 8) = -alphaf*betaz/(rho_sqrt*a);
-    //R_v
-    EigVec(4, 1) = 1.0/(a*a); 
-    EigVec(4, 2) = u/(a*a);
-    EigVec(4, 3) = v/(a*a);
-    EigVec(4, 4) = w/(a*a);
-    EigVec(4, 5) = (0.5*V2 + X*(mygamma-2.0)/(mygamma-1.0))/(a*a); 
-    EigVec(4, 6) = 0.0;
-    EigVec(4, 7) = 0.0;
-    EigVec(4, 8) = 0.0;
-    //R_v+cs
-    EigVec(5, 1) = alphas/(a*a);
-    EigVec(5, 2) = (alphas*u + alphaf*cf*betax*S)/(a*a);
-    EigVec(5, 3) = alphas*(v + cs)/(a*a);
-    EigVec(5, 4) = (alphas*w + alphaf*cf*betaz*S)/(a*a);
-    EigVec(5, 5) = ( alphas*(H - B2/rho + v*cs) + alphaf*cf*S*(w*betaz + u*betax) - alphaf*a*pow(Bx*Bx + Bz*Bz, 0.5)/rho_sqrt )/(a*a);
-    EigVec(5, 6) = -alphaf*betax/(rho_sqrt*a);
-    EigVec(5, 7) = 0.0;
-    EigVec(5, 8) = -alphaf*betaz/(rho_sqrt*a);
-    //R_v+ca
-    EigVec(6, 1) = 0.0;
-    EigVec(6, 2) = -rho*betaz;
-    EigVec(6, 3) = 0.0;
-    EigVec(6, 4) =  rho*betax;
-    EigVec(6, 5) =  rho*(w*betax - u*betaz);
-    EigVec(6, 6) =  S*rho_sqrt*betaz;
-    EigVec(6, 7) = 0.0;
-    EigVec(6, 8) = -S*rho_sqrt*betax;
-    //R_v+cf
-    EigVec(7, 1) = alphaf/(a*a);
-    EigVec(7, 2) = (alphaf*u - alphas*cs*betax*S)/(a*a);
-    EigVec(7, 3) = alphaf*(v + cf)/(a*a);
-    EigVec(7, 4) = (alphaf*w - alphas*cs*betaz*S)/(a*a);
-    EigVec(7, 5) = ( alphaf*(H - B2/rho + v*cf) - alphas*cs*S*(u*betax + w*betaz) - alphas*a*pow(Bx*Bx + Bz*Bz, 0.5)/rho_sqrt )/(a*a);
-    EigVec(7, 6) = alphas*betax/(rho_sqrt*a);
-    EigVec(7, 7) = 0.0;
-    EigVec(7, 8) = alphas*betaz/(rho_sqrt*a);
-    
-    // compute the fluxes of the left and right states
-    matrix flux_L(1, 8);
-    matrix flux_R(1, 8);
-
-    flux_L = Conserved2FluxY(L);
-    flux_R = Conserved2FluxY(R);
-
-    // compute the Roe flux
-    amp = dotprod(amp, EigVal);
-    fluxY = 0.5 * (flux_L + flux_R) - 0.5 * amp * EigVec;
-    return fluxY;
+    else if(SstarL < 0 && SM >=0)
+    {
+        for(int i = 0; i < 8; i++)
+        {
+            F(1, i) = Fstar2L(1, i);
+        }
+    }
+    else if(SM < 0 && SstarR >= 0)
+    {
+        for(int i = 0; i < 8; i++)
+        {
+            F(1, i) = Fstar2R(1, i);
+        }
+    }
+    else if(SstarR < 0 && SR >= 0)
+    {
+        for(int i = 0; i < 8; i++)
+        {
+            F(1, i) = FstarR(1, i);
+        }
+    }
+    else if(SR < 0)
+    {
+        for(int i = 0; i < 8; i++)
+        {
+            F(1, i) = FR(1, i);
+        }
+    }
+    return F;
 }
 
-matrix RoeZ(const matrix &L, const matrix &R, double Bz)
-{
-    // compute the enthalpy of the left and right states: H = (E+P*)/rho
-    matrix fluxZ(1, 8);
-    double P_L = ComputePressure(L);
-    double P_R = ComputePressure(R);
-    double PStar_L = ComputePressureStar(L);
-    double PStar_R = ComputePressureStar(R);
-    double H_L = (L(1, 5) + PStar_L) / L(1, 1);
-    double H_R = (R(1, 5) + PStar_R) / R(1, 1);
-    
-    // compute Roe average values
-    double rhoL_sqrt = pow(L(1, 1), 0.5);
-    double rhoR_sqrt = pow(R(1, 1), 0.5);
-    double rho = rhoL_sqrt*rhoR_sqrt;
-    double u  = (L(1, 2) / rhoL_sqrt + R(1, 2) / rhoR_sqrt) / (rhoL_sqrt + rhoR_sqrt);
-    double v  = (L(1, 3) / rhoL_sqrt + R(1, 3) / rhoR_sqrt) / (rhoL_sqrt + rhoR_sqrt);
-    double w  = (L(1, 4) / rhoL_sqrt + R(1, 4) / rhoR_sqrt) / (rhoL_sqrt + rhoR_sqrt);    
-    double Bx = (L(1, 6) * rhoR_sqrt + R(1, 6) * rhoL_sqrt) / (rhoL_sqrt + rhoR_sqrt);
-    double By = (L(1, 7) * rhoR_sqrt + R(1, 7) * rhoL_sqrt) / (rhoL_sqrt + rhoR_sqrt);
-    double H  = (rhoL_sqrt * H_L + rhoR_sqrt * H_R) / (rhoL_sqrt + rhoR_sqrt);
-    double V2 = u*u + v*v + w*w;
-    double B2 = Bx*Bx + By*By + Bz*Bz;
-    double X  = 0.5*(pow(R(1, 6) - L(1, 6), 2.0) + pow(R(1, 7) - L(1, 7), 2.0))/pow(rhoL_sqrt + rhoR_sqrt, 2.0); 
-    double P  = (rho/mygamma)*((mygamma-1.0)*(H - 0.5*V2 - B2/rho ) - (mygamma-2.0)*X);
-
-    // check negative pressure
-    if ( P < 0.0 )
-    {
-        printf("negative pressure!\t%f\n", H - 0.5 * V2);
-        exit(1);
-    }
-    // calculate speed 
-    double a  = pow( mygamma*P/rho ,0.5);  //sound speed
-    double ca = pow( Bz*Bz/rho, 0.5);      //Alfven speed
-    double cf = pow(0.5*(a*a + B2/rho) + 0.5*pow( (a*a + B2/rho)*(a*a + B2/rho) - 4.0*a*a*Bz*Bz/rho, 0.5) ,0.5); //fast magnetosonic speed
-    double cs = pow(0.5*(a*a + B2/rho) - 0.5*pow( (a*a + B2/rho)*(a*a + B2/rho) - 4.0*a*a*Bz*Bz/rho, 0.5) ,0.5); //slow magnetosonic speed
-    
-    // compute some parameters
-    double alphaf = pow((a*a - cs*cs)/(cf*cf - cs*cs), 0.5);
-    double alphas = pow((cf*cf - a*a)/(cf*cf - cs*cs), 0.5); 
-    double betax  = Bx/pow(Bx*Bx + By*By, 0.5);
-    double betay  = By/pow(Bx*Bx + By*By, 0.5);
-    double rho_sqrt = pow(rho, 0.5);
-    double S;    //S = sign(Bz)
-    if(Bz > 0.0)
-    {
-        S = 1.0;
-    }
-    else if(Bz < 0.0)
-    {
-        S = -1.0;
-    }
-    else
-    {
-        S = 0.0;
-    }
-
-    // compute the amplitudes of different characteristic waves
-    matrix dW(1, 8);
-    matrix amp(1,7);
-
-    dW = Conserved2Primitive(L) - Conserved2Primitive(R);
-    
-    amp(1, 1) = 0.5*(alphaf*(X*dW(1, 1) + dW(1, 5)) + rho*alphas*cs*S*(betax*dW(1, 2) + betay*dW(1, 3)) - rho*alphaf*cf*dW(1, 4) + rho_sqrt*alphas*a*(betax*dW(1, 6) + betay*dW(1, 7))); 
-    amp(1, 2) = 0.5*(betax*dW(1, 3) - betay*dW(1 ,2) + S*(betax*dW(1, 7)- betay*dW(1, 6))/rho_sqrt); 
-    amp(1, 3) = 0.5*(alphas*(X*dW(1, 1) + dW(1, 5)) - rho*alphaf*cf*S*(betax*dW(1, 2) + betay*dW(1, 3)) - rho*alphas*cs*dW(1, 4) + rho_sqrt*alphaf*a*(betax*dW(1, 6) + betay*dW(1, 7)));
-    amp(1, 4) = (a*a - X)*dW(1, 1) - (P_L - P_R);
-    amp(1, 5) = 0.5*(alphas*(X*dW(1, 1) + dW(1, 5)) + rho*alphaf*cf*S*(betax*dW(1, 2) + betay*dW(1, 3)) + rho*alphas*cs*dW(1, 4) + rho_sqrt*alphaf*a*(betax*dW(1, 6) + betay*dW(1, 7)));
-    amp(1, 6) = 0.5*(betay*dW(1, 2) - betax*dW(1 ,3) + S*(betax*dW(1, 7)- betay*dW(1, 6))/rho_sqrt);
-    amp(1, 7) = 0.5*(alphaf*(X*dW(1, 1) + dW(1, 5)) - rho*alphas*cs*S*(betax*dW(1, 2) + betay*dW(1, 3)) + rho*alphaf*cf*dW(1, 4) + rho_sqrt*alphas*a*(betax*dW(1, 6) + betay*dW(1, 7)));
-    // compute the eigenvalues and right eigenvector matrix R
-    matrix EigVal(1, 7);
-    matrix EigVec(7, 8);
-
-    EigVal(1, 1) = abs(w - cf);
-    EigVal(1, 2) = abs(w - ca);
-    EigVal(1, 3) = abs(w - cs);
-    EigVal(1, 4) = abs(w);
-    EigVal(1, 5) = abs(w + cs);
-    EigVal(1, 6) = abs(w + ca);
-    EigVal(1, 7) = abs(w + cf);
-    
-    //R_w-cf 
-    EigVec(1, 1) = alphaf/(a*a);
-    EigVec(1, 2) = (alphaf*u + alphas*cs*betax*S)/(a*a);
-    EigVec(1, 3) = (alphaf*v + alphas*cs*betay*S)/(a*a);
-    EigVec(1, 4) = alphaf*(w - cf)/(a*a);
-    EigVec(1, 5) = ( alphaf*(H - B2/rho - w*cf) + alphas*cs*S*(v*betay + u*betax) - alphas*a*pow(Bx*Bx + By*By, 0.5)/rho_sqrt )/(a*a);
-    EigVec(1, 6) = alphas*betax/(rho_sqrt*a);
-    EigVec(1, 7) = alphas*betay/(rho_sqrt*a);
-    EigVec(1, 8) = 0.0;
-    //R_w-ca
-    EigVec(2, 1) = 0.0;
-    EigVec(2, 2) = -rho*betay;
-    EigVec(2, 3) =  rho*betax;
-    EigVec(2, 4) = 0.0;
-    EigVec(2, 5) = -rho*(u*betay - v*betax);
-    EigVec(2, 6) = -S*rho_sqrt*betay;
-    EigVec(2, 7) =  S*rho_sqrt*betax;
-    EigVec(2, 8) = 0.0;
-    //R_w-cs
-    EigVec(3, 1) = alphas/(a*a);
-    EigVec(3, 2) = (alphas*u - alphaf*cf*betax*S)/(a*a);
-    EigVec(3, 3) = (alphas*v - alphaf*cf*betay*S)/(a*a);
-    EigVec(3, 4) = alphas*(w - cs)/(a*a);
-    EigVec(3, 5) = ( alphas*(H - B2/rho - w*cs) - alphaf*cf*S*(u*betax + v*betay) - alphaf*a*pow(Bx*Bx + By*By, 0.5)/rho_sqrt )/(a*a);
-    EigVec(3, 6) = -alphaf*betax/(rho_sqrt*a);
-    EigVec(3, 7) = -alphaf*betay/(rho_sqrt*a);
-    EigVec(3, 8) = 0.0;
-    //R_w
-    EigVec(4, 1) = 1.0/(a*a); 
-    EigVec(4, 2) = u/(a*a);
-    EigVec(4, 3) = v/(a*a);
-    EigVec(4, 4) = w/(a*a);
-    EigVec(4, 5) = (0.5*V2 + X*(mygamma-2.0)/(mygamma-1.0))/(a*a); 
-    EigVec(4, 6) = 0.0;
-    EigVec(4, 7) = 0.0;
-    EigVec(4, 8) = 0.0;
-    //R_w+cs
-    EigVec(5, 1) = alphas/(a*a);
-    EigVec(5, 2) = (alphas*u + alphaf*cf*betax*S)/(a*a);
-    EigVec(5, 3) = (alphas*v + alphaf*cf*betay*S)/(a*a);
-    EigVec(5, 4) = alphas*(w + cs)/(a*a);
-    EigVec(5, 5) = ( alphas*(H - B2/rho + w*cs) + alphaf*cf*S*(u*betax + v*betay) - alphaf*a*pow(Bx*Bx + By*By, 0.5)/rho_sqrt )/(a*a);
-    EigVec(5, 6) = -alphaf*betax/(rho_sqrt*a);
-    EigVec(5, 7) = -alphaf*betay/(rho_sqrt*a);
-    EigVec(5, 8) = 0.0;
-    //R_w+ca
-    EigVec(6, 1) = 0.0;
-    EigVec(6, 2) =  rho*betay;
-    EigVec(6, 3) = -rho*betax;
-    EigVec(6, 4) = 0.0;
-    EigVec(6, 5) =  rho*(u*betay - v*betax);
-    EigVec(6, 6) = -S*rho_sqrt*betay;
-    EigVec(6, 7) =  S*rho_sqrt*betax;
-    EigVec(6, 8) = 0.0;
-    //R_w+cf
-    EigVec(7, 1) = alphaf/(a*a);
-    EigVec(7, 2) = (alphaf*u - alphas*cs*betax*S)/(a*a);
-    EigVec(7, 3) = (alphaf*v - alphas*cs*betay*S)/(a*a);
-    EigVec(7, 4) = alphaf*(w + cf)/(a*a);
-    EigVec(7, 5) = ( alphaf*(H - B2/rho + w*cf) - alphas*cs*S*(v*betay + u*betax) - alphas*a*pow(Bx*Bx + By*By, 0.5)/rho_sqrt )/(a*a);
-    EigVec(7, 6) = alphas*betax/(rho_sqrt*a);
-    EigVec(7, 7) = alphas*betay/(rho_sqrt*a);
-    EigVec(7, 8) = 0.0;
-    // compute the fluxes of the left and right states
-    matrix flux_L(1, 8);
-    matrix flux_R(1, 8);
-
-    flux_L = Conserved2FluxZ(L);
-    flux_R = Conserved2FluxZ(R);
-
-    // compute the Roe flux
-    amp = dotprod(amp, EigVal);
-    fluxZ = 0.5 * (flux_L + flux_R) - 0.5 * amp * EigVec;
-    return fluxZ;
-}
 #endif //__SUBFUNC_CPP__

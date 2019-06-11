@@ -75,7 +75,7 @@ main(int argc, char *argv[])
         // compute fluxes
         // R[j-1] is the LEFT state at the j+1/2 inteface
         for (int j = nghost + 1; j <= N - nghost+1; j++)
-            fluxX.SetRow(j, RoeX(R.GetRow(j-1), L.GetRow(j), U(j, 6)));
+            fluxX.SetRow(j, HLLD(R.GetRow(j-1), L.GetRow(j), U(j, 6)));
 
         // update the volume-averaged input variables by dt
         for (int j = nghost + 1; j <= N - nghost; j++)
