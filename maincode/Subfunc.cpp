@@ -2,6 +2,7 @@
 #define __SUBFUNC_CPP__
 
 #include "ConstPara.h"
+#include "matrix.h"
 
 // ##########################
 // Define initial condition
@@ -86,7 +87,7 @@ double ComputeTimestep(matrix &U)
 // ##########################
 // Compute limited slope
 // ##########################
-matrix ComputeLimitedSlope(const matrix &L, const matrix &C, const matrix &R)
+matrix ComputeLimitedSlope(matrix L, matrix C, matrix R)
 {
     // compute the left and right slopes
     matrix slope_L(1, 3);
@@ -115,7 +116,7 @@ matrix ComputeLimitedSlope(const matrix &L, const matrix &C, const matrix &R)
 // ##########################
 // Convert conserved variables to primitive variables
 // ##########################
-matrix Conserved2Primitive(const matrix &U)
+matrix Conserved2Primitive(matrix U)
 {
     matrix W(1, 3);
     W(1, 1) = U(1, 1);
@@ -127,7 +128,7 @@ matrix Conserved2Primitive(const matrix &U)
 // ##########################
 // Convert primitive variables to conserved variables
 // ##########################
-matrix Primitive2Conserved(const matrix &W)
+matrix Primitive2Conserved(matrix W)
 {
     matrix U(1, 3);
     U(1, 1) = W(1, 1);
@@ -189,7 +190,7 @@ void DataReconstruction_PPM(matrix &U, matrix &L, matrix &R)
 
     // compute the left and right states of each cell
     for (int j = 3; j <= N - 2; j++)
-        acc.SetRow(j, ComputeLimitedSlope(slope.GetRow(j - 1), slope.GetRow(j), slope.GetRow(j + 1)));
+        acc.SetRow(j, ComputeLimitedSlope(W.GetRow(j - 2), W.GetRow(j), W.GetRow(j + 2)));
 
     matrix slope_limited(1, 3);
     matrix acc_limited(1, 3);
@@ -212,7 +213,7 @@ void DataReconstruction_PPM(matrix &U, matrix &L, matrix &R)
 // ##########################
 // Convert conserved variables to fluxes
 // ##########################
-matrix Conserved2Flux(const matrix &U)
+matrix Conserved2Flux(matrix U)
 {
     matrix flux(1, 3);
     double P = ComputePressure(U(1, 1), U(1, 2), U(1, 3));
@@ -227,7 +228,7 @@ matrix Conserved2Flux(const matrix &U)
 // ##########################
 // Roe's Riemann solver
 // ##########################
-matrix Roe(const matrix &L, const matrix &R)
+matrix Roe(matrix L, matrix R)
 {
     // compute the enthalpy of the left and right states: H = (E+P)/rho
     matrix flux(1, 3);
