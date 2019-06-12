@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 # read the text file
-firstcol = np.loadtxt("../maincode/anidata.txt", usecols=(0,), dtype=int) # read first column
-N_In = firstcol[0] # x axis not include ghost
+firstcol = np.loadtxt("../maincode/anidata.txt", usecols=(0,)) # read first column
+N_In = int(firstcol[0]) # x axis not include ghost
 U = np.loadtxt("../maincode/anidata.txt",skiprows=1) # read anthoer row
 totalrow = len(U) # count the total length of data
 frame = int(totalrow/N_In)
