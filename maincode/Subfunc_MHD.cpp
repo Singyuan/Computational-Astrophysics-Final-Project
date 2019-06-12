@@ -181,7 +181,6 @@ void DataReconstruction_PLM(matrix &U, matrix &L, matrix &R)
 {
     // allocate memory
     matrix W(N, 8);
-    matrix slope_limited(N, 8);
  
     // conserved variables-- > primitive variables
     for (int j = 1; j <= N; j++)
@@ -199,8 +198,8 @@ void DataReconstruction_PLM(matrix &U, matrix &L, matrix &R)
         R.SetRow(j, W.GetRow(j) + 0.5 * slope_limited);
 
         // ensure face-centered variables lie between nearby volume-averaged (~cell-centered) values
-        for(int i = 0; i < 5; i++ )
-       {
+        for(int i = 0; i < 8; i++ )
+        {
             L(j, i) = max( L(j, i), min( W(j-1, i), W(j, i) ) );
             L(j, i) = min( L(j, i), max( W(j-1, i), W(j, i) ) );
             R(j, i) = 2.0*W(j, i) - L(j, i);

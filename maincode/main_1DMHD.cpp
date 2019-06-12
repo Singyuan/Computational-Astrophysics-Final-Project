@@ -48,8 +48,8 @@ main(int argc, char *argv[])
     myfile << N_In << "\r\n";
 
     // main loop
-//    while(t < end_time)
-    for (int i = 0; i < largenumber; i++)
+    while(t < end_time)
+//    for (int i = 0; i < largenumber; i++)
     {
         // set the boundary conditions
         BoundaryCondition(U);
@@ -75,8 +75,10 @@ main(int argc, char *argv[])
         // compute fluxes
         // R[j-1] is the LEFT state at the j+1/2 inteface
         for (int j = nghost + 1; j <= N - nghost+1; j++)
+        {
+           // fluxX.SetRow(j, Roe(R.GetRow(j-1), L.GetRow(j), U(j, 6))); 
             fluxX.SetRow(j, HLLD(R.GetRow(j-1), L.GetRow(j), U(j, 6)));
-
+        }
         // update the volume-averaged input variables by dt
         for (int j = nghost + 1; j <= N - nghost; j++)
         {
@@ -95,7 +97,7 @@ main(int argc, char *argv[])
                 myfile << x(1, j - 2) << "\t";
                 myfile << U(j, 1) << "\t";
                 myfile << U(j, 2)/U(j, 1) << "\t";
-                myfile << ComputePressure(U) << "\t";
+                myfile << ComputePressure(U.GetRow(j)) << "\t";
                 myfile << "\r\n";
             }
         }
