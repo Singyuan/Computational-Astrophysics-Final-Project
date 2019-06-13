@@ -2,7 +2,7 @@ Computational Astrophysics Final Project
 ===
 
 ## One-dimension hydrodynamics
-> I define a data type "matrix" by class in order to simplify the code such that easy to understand it and mimic to python code. [name=Singyuan Yeh]
+> I define a data type "matrix" by class in order to simplify the code such that easy to understand it and mimic to python code. by Singyuan Yeh
 
 This is simple simulation about 1D hydrodynamics.
 1. Visit file "maincode".
@@ -33,9 +33,11 @@ This is use unsplit mathod so it might be a little ustable
 2. Run the matlab code "Hydro2D.m"
 
 ## One-dimension hydrodynamics with OpenMP
+Visit file "main_omp"
 It is similar to "One-dimension hydrodynamics"
 
 ## Two-dimension hydrodynamics with MPI
+Visit file "main3d_mpi"
 It is similar to "Two-dimension hydrodynamics"
 
 >**Note:** We add namespace std into "Subfunc.cpp". We do not know why after include mpi.h, the function "max" can not input double.
