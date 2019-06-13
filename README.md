@@ -37,8 +37,6 @@ It is similar to "One-dimension hydrodynamics"
 
 ## Two-dimension hydrodynamics with MPI
 It is similar to "Two-dimension hydrodynamics"
-:::info
-**Note:** We add namespace std into "Subfunc.cpp". We do not know why after include mpi.h, the function "max" can not input double.
-:::
+<table><tr><td bgcolor=orange>**Note:** We add namespace std into "Subfunc.cpp". We do not know why after include mpi.h, the function "max" can not input double.</td></tr></table>
 
 
